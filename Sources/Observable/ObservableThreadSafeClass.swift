@@ -68,10 +68,17 @@ open class ObservableThreadSafeClass: Observable, ObservableObject {
     private var observerRemoveLock = DispatchSemaphore(value: 1)
     
     public func addObserver<TObservationProtocol: AnyObject>(_ observer: TObservationProtocol) {
-        let lock = observerLock.wait(timeout: DispatchTime.now().advanced(by: DispatchTimeInterval.milliseconds(10))) == .success ? observerLock : observerAddLock
-        var collection = ObjectIdentifier(lock) == ObjectIdentifier(observerLock) ? observers : observersAddQueue
-        collection[ObjectIdentifier(observer)] = ObserverContainer(observer: observer, dispatchQueue: OperationQueue.current?.underlyingQueue)
-        lock.signal()
+        let observation = ObserverContainer(observer: observer, dispatchQueue: OperationQueue.current?.underlyingQueue)
+        
+        if observerLock.wait(timeout: DispatchTime.now().advanced(by: DispatchTimeInterval.milliseconds(10))) == .success {
+            observers[ObjectIdentifier(observer)] = observation
+            observerLock.signal()
+        }
+        else {
+            observerAddLock.wait()
+            observersAddQueue[ObjectIdentifier(observer)] = observation
+            observerAddLock.signal()
+        }
     }
     
     public func removeObserver<TObservationProtocol: AnyObject>(_ observer: TObservationProtocol) {
@@ -105,15 +112,23 @@ open class ObservableThreadSafeClass: Observable, ObservableObject {
         }
         
         self.observerAddLock.wait() // Lock the Add Queue
+        let observersToAdd = self.observersAddQueue
+        observersAddQueue.removeAll()
+        self.observerAddLock.signal() // Release the Add Queue Lock
+               
         self.observerRemoveLock.wait() // Lock the Remove Queue
-        for (id, observation) in observersAddQueue { // Add all of the Queued Observers
+        let observersToRemove = self.observersRemoveQueue
+        observersRemoveQueue.removeAll()
+        self.observerRemoveLock.signal() // Release the Remove Queue Lock
+        
+        // Add all of the Queued Observers
+        for (id, observation) in observersToAdd {
             observers[id] = observation
         }
-        for (id) in observersRemoveQueue.keys { // Remove all of the Queued Observers
+        // Remove all of the Queued Observers
+        for (id) in observersToRemove.keys {
             observers.removeValue(forKey: id)
         }
-        self.observerAddLock.signal() // Release the Add Queue Lock
-        self.observerRemoveLock.signal() // Release the Remove Queue Lock
         self.observerLock.signal()
     }
     
