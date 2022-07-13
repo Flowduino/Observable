@@ -27,7 +27,7 @@ let package = Package(
     dependencies: [
         .package(
             url: "https://github.com/Flowduino/Observable.git",
-            .upToNextMajor(from: "1.0.1")
+            .upToNextMajor(from: "1.0.4")
         ),
     ],
     //...
