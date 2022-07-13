@@ -123,4 +123,8 @@ open class ObservableThread: Thread, Observable, ObservableObject {
             objectWillChange.send()
         }
     }
+    
+    required override public init() {
+        super.init()
+    }
 }

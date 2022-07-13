@@ -60,4 +60,8 @@ open class ObservableClass: Observable, ObservableObject {
             }
         }
     }
+    
+    required public init() {
+        
+    }
 }

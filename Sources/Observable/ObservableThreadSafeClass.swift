@@ -123,4 +123,8 @@ open class ObservableThreadSafeClass: Observable, ObservableObject {
             objectWillChange.send()
         }
     }
+    
+    required public init() {
+        
+    }
 }
