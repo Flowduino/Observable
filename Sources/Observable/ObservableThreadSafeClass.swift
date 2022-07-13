@@ -124,7 +124,7 @@ open class ObservableThreadSafeClass: Observable, ObservableObject {
         }
     }
     
-    required public init() {
+    public init() {
         
     }
 }

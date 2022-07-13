@@ -124,7 +124,7 @@ open class ObservableThread: Thread, Observable, ObservableObject {
         }
     }
     
-    required override public init() {
+    override public init() {
         super.init()
     }
 }
