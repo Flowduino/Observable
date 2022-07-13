@@ -112,13 +112,13 @@ open class ObservableThread: Thread, Observable, ObservableObject {
         self._observers.lock.signal()
     }
     
-    internal func notifyChange() {
+    open func notifyChange() {
         Task {
             await notifyChange()
         }
     }
     
-    internal func notifyChange() async {
+    open func notifyChange() async {
         await MainActor.run {
             objectWillChange.send()
         }
