@@ -12,7 +12,7 @@ import ThreadSafeSwift
 /**
  Provides custom Observer subscription and notification behaviour for Threads
  - Author: Simon J. Stuart
- - Version: 1.0.5
+ - Version: 1.0.6
  - Note: The Observers are behind a Semaphore Lock
  - Note: A "Revolving Door" solution has been implemented to ensure that Observer Callbacks can modify the Observers (add/remove) without causing a Deadlock.
  */
@@ -44,14 +44,14 @@ open class ObservableThread: Thread, Observable, ObservableObject {
     /**
      Dictionary mapping an `ObjectIdentifer` (reference to an Observer Instance) against its `ObserverContainer`
      - Author: Simon J. Stuart
-     - Version: 1.0.5
+     - Version: 1.0.6
      */
     @ThreadSafeSemaphore private var observers = [ObjectIdentifier : ObserverContainer]()
     
     /**
      Dictionary mapping an `ObjectIdentifer` (reference to an Observer Instance) against its `ObserverContainer`
      - Author: Simon J. Stuart
-     - Version: 1.0.5
+     - Version: 1.0.6
      - Note: This is used as a temporary "Holding Queue" when the `observers` Dictionary has its Lock retained by another Thread.
      */
     @ThreadSafeSemaphore private var observersAddQueue = [ObjectIdentifier : ObserverContainer]()
@@ -59,7 +59,7 @@ open class ObservableThread: Thread, Observable, ObservableObject {
     /**
      Dictionary mapping an `ObjectIdentifer` (reference to an Observer Instance) against its `ObserverContainer`
      - Author: Simon J. Stuart
-     - Version: 1.0.5
+     - Version: 1.0.6
      - Note: This is used as a temporary "Holding Queue" when the `observers` Dictionary has its Lock retained by another Thread.
      */
     @ThreadSafeSemaphore private var observersRemoveQueue = [ObjectIdentifier : ObserverContainer]()
@@ -89,7 +89,7 @@ open class ObservableThread: Thread, Observable, ObservableObject {
     /**
      Iterates all Observers and invokes your Closure if they conform to the expected Protocol
      - Author: Simon J. Stuart
-     - Version: 1.0.5
+     - Version: 1.0.6
      */
     public func withObservers<TObservationProtocol>(_ code: @escaping (_ observer: TObservationProtocol) -> ()) {
         _observers.withLock { observers in
