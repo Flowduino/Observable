@@ -27,7 +27,7 @@ let package = Package(
     dependencies: [
         .package(
             url: "https://github.com/Flowduino/Observable.git",
-            .upToNextMajor(from: "1.0.4")
+            .upToNextMajor(from: "1.0.5")
         ),
     ],
     //...
@@ -222,4 +222,4 @@ Any number of *Observer Protocols* can be marshalled by any of our *Observable* 
 
 ## License
 
-`ThreadSafeSwift` is available under the MIT license. See the [LICENSE file](./LICENSE) for more info.
+`Observable` is available under the MIT license. See the [LICENSE file](./LICENSE) for more info.

@@ -12,7 +12,7 @@ import ThreadSafeSwift
 /**
  Provides custom Observer subscription and notification behaviour for Threads
  - Author: Simon J. Stuart
- - Version: 1.0.4
+ - Version: 1.0.5
  - Note: The Observers are behind a Semaphore Lock
  - Note: A "Revolving Door" solution has been implemented to ensure that Observer Callbacks can modify the Observers (add/remove) without causing a Deadlock.
  */
@@ -44,92 +44,89 @@ open class ObservableThread: Thread, Observable, ObservableObject {
     /**
      Dictionary mapping an `ObjectIdentifer` (reference to an Observer Instance) against its `ObserverContainer`
      - Author: Simon J. Stuart
-     - Version: 1.0.4
+     - Version: 1.0.5
      */
-    private var observers = [ObjectIdentifier : ObserverContainer]()
-    private var observerLock = DispatchSemaphore(value: 1)
+    @ThreadSafeSemaphore private var observers = [ObjectIdentifier : ObserverContainer]()
     
     /**
      Dictionary mapping an `ObjectIdentifer` (reference to an Observer Instance) against its `ObserverContainer`
      - Author: Simon J. Stuart
-     - Version: 1.0.4
+     - Version: 1.0.5
      - Note: This is used as a temporary "Holding Queue" when the `observers` Dictionary has its Lock retained by another Thread.
      */
-    private var observersAddQueue = [ObjectIdentifier : ObserverContainer]()
-    private var observerAddLock = DispatchSemaphore(value: 1)
+    @ThreadSafeSemaphore private var observersAddQueue = [ObjectIdentifier : ObserverContainer]()
     
     /**
      Dictionary mapping an `ObjectIdentifer` (reference to an Observer Instance) against its `ObserverContainer`
      - Author: Simon J. Stuart
-     - Version: 1.0.4
+     - Version: 1.0.5
      - Note: This is used as a temporary "Holding Queue" when the `observers` Dictionary has its Lock retained by another Thread.
      */
-    private var observersRemoveQueue = [ObjectIdentifier : ObserverContainer]()
-    private var observerRemoveLock = DispatchSemaphore(value: 1)
+    @ThreadSafeSemaphore private var observersRemoveQueue = [ObjectIdentifier : ObserverContainer]()
     
     public func addObserver<TObservationProtocol: AnyObject>(_ observer: TObservationProtocol) {
         let observation = ObserverContainer(observer: observer, dispatchQueue: OperationQueue.current?.underlyingQueue)
         
-        if observerLock.wait(timeout: DispatchTime.now().advanced(by: DispatchTimeInterval.milliseconds(10))) == .success {
-            observers[ObjectIdentifier(observer)] = observation
-            observerLock.signal()
-        }
-        else {
-            observerAddLock.wait()
-            observersAddQueue[ObjectIdentifier(observer)] = observation
-            observerAddLock.signal()
+        _observers.withTryLock { value in
+            value[ObjectIdentifier(observer)] = observation
+        } _: {
+            self._observersAddQueue.withLock { value in
+                value[ObjectIdentifier(observer)] = observation
+            }
         }
     }
     
     public func removeObserver<TObservationProtocol: AnyObject>(_ observer: TObservationProtocol) {
-        let lockResult = observerLock.wait(timeout: DispatchTime.now().advanced(by: DispatchTimeInterval.milliseconds(10)))
-        
-        if lockResult == .success { // If we can obtain the lock for the Main Observer Collection...
-            observers.removeValue(forKey: ObjectIdentifier(observer)) // Simply remove it from the Collection
-            observerLock.signal() // Release the Lock
-        }
-        else { // If we CAN'T get the Main Observer Collection's Lock...
-            observerRemoveLock.wait() // Get the Remove Queue Lock
-            observersRemoveQueue[ObjectIdentifier(observer)] = ObserverContainer(observer: observer, dispatchQueue: nil) // the Dispatch Queue doesn't matter here!
-            observerRemoveLock.signal() // Release the Remove Queue Lock
+        _observers.withTryLock { value in
+            value.removeValue(forKey: ObjectIdentifier(observer))
+        } _: {
+            self._observersRemoveQueue.withLock { value in
+                value[ObjectIdentifier(observer)] = ObserverContainer(observer: observer, dispatchQueue: nil) // the Dispatch Queue doesn't matter here!]
+            }
         }
     }
     
+    /**
+     Iterates all Observers and invokes your Closure if they conform to the expected Protocol
+     - Author: Simon J. Stuart
+     - Version: 1.0.5
+     */
     public func withObservers<TObservationProtocol>(_ code: @escaping (_ observer: TObservationProtocol) -> ()) {
-        self.observerLock.wait()
-        for (id, observation) in observers {
-            guard let observer = observation.observer else { // Check if the Observer still exists
-                observers.removeValue(forKey: id) // If it doesn't, remove the Observer from the collection...
-                continue // ...then continue to the next one
-            }
-            
-            if let typedObserver = observer as? TObservationProtocol {
-                let dispatchQueue = observation.dispatchQueue ?? DispatchQueue.main
-                dispatchQueue.async {
-                    code(typedObserver)
+        _observers.withLock { observers in
+            for (id, observation) in observers {
+                guard let observer = observation.observer else { // Check if the Observer still exists
+                    observers.removeValue(forKey: id) // If it doesn't, remove the Observer from the collection...
+                    continue // ...then continue to the next one
+                }
+                
+                if let typedObserver = observer as? TObservationProtocol {
+                    let dispatchQueue = observation.dispatchQueue ?? DispatchQueue.main
+                    dispatchQueue.async {
+                        code(typedObserver)
+                    }
                 }
             }
+            var addPending = [ObjectIdentifier : ObserverContainer]()
+            var removePending = [ObjectIdentifier : ObserverContainer]()
+
+            // Add all pending from the Add Queue
+            self._observersAddQueue.withLock { value in
+                addPending = value
+                value.removeAll()
+            }
+            for (key, value) in addPending {
+                observers[key] = value
+            }
+            
+            // Remove all pending from the Remove Queue
+            self._observersRemoveQueue.withLock { value in
+                removePending = value
+                value.removeAll()
+            }
+            for (id) in removePending.keys {
+                observers.removeValue(forKey: id)
+            }
         }
-        
-        self.observerAddLock.wait() // Lock the Add Queue
-        let observersToAdd = self.observersAddQueue
-        observersAddQueue.removeAll()
-        self.observerAddLock.signal() // Release the Add Queue Lock
-               
-        self.observerRemoveLock.wait() // Lock the Remove Queue
-        let observersToRemove = self.observersRemoveQueue
-        observersRemoveQueue.removeAll()
-        self.observerRemoveLock.signal() // Release the Remove Queue Lock
-        
-        // Add all of the Queued Observers
-        for (id, observation) in observersToAdd {
-            observers[id] = observation
-        }
-        // Remove all of the Queued Observers
-        for (id) in observersToRemove.keys {
-            observers.removeValue(forKey: id)
-        }
-        self.observerLock.signal()
     }
     
     open func notifyChange() {
