@@ -11,7 +11,7 @@ import Foundation
 /**
  Absolute Base Class for any Class you want to make Observable
  - Author: Simon J. Stuart
- - Version: 1.0
+ - Version: 1.0.0
  - Note: You can register any number of Observers, conforming to any number of Obsever Protocols
  
  Inherit from this Base Class to make your Classes dynamically Observable.
@@ -21,14 +21,14 @@ open class ObservableClass: Observable, ObservableObject {
     /**
      Contains a Weak Reference to an Observer.
      - Author: Simon J. Stuart
-     - Version: 1.0
+     - Version: 1.0.0
      - Note: This is why all of our Protocols must enforce a constraint of `AnyObject`
      */
     struct ObserverContainer{
         /**
          Reference to the Observer Object
          - Author: Simon J. Stuart
-         - Version: 1.0
+         - Version: 1.0.0
          - Note: This Reference **must** be `weak` to prevent Reference Counting from retaining unwanted Objects.
          */
         weak var observer: AnyObject?
@@ -37,7 +37,7 @@ open class ObservableClass: Observable, ObservableObject {
     /**
      Dictionary mapping an `ObjectIdentifer` (reference to an Observer Instance) against its `ObserverContainer`
      - Author: Simon J. Stuart
-     - Version: 1.0
+     - Version: 1.0.0
      */
     private var observers = [ObjectIdentifier : ObserverContainer]()
 

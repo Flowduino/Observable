@@ -21,21 +21,21 @@ open class ObservableThreadSafeClass: Observable, ObservableObject {
     /**
      Contains a Weak Reference to an Observer.
      - Author: Simon J. Stuart
-     - Version: 1.0
+     - Version: 1.0.0
      - Note: This is why all of our Protocols must enforce a constraint of `AnyObject`
      */
     public struct ObserverContainer {
         /**
          Reference to the Observer Object
          - Author: Simon J. Stuart
-         - Version: 1.0
+         - Version: 1.0.0
          - Note: This Reference **must** be `weak` to prevent Reference Counting from retaining unwanted Objects.
          */
         weak var observer: AnyObject?
         /**
          The `DispatchQueue` from which the Observer registered
          - Author: Simon J. Stuart
-         - Version: 1.0
+         - Version: 1.0.0
          - Note: This is used to ensure that the Observer's Callbacks are invoked on the Observer's own `DispatchQueue`
          */
         var dispatchQueue: DispatchQueue?
