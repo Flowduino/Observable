@@ -65,7 +65,7 @@ This not only works for `@ObservedObject` decorated Variables in a SwiftUI `View
 First, you would define a Protocol describing the Methods implemented in your *Observer* Class Type that your *Observable* Class can invoke:
 ```swift
 /// Protocol defining what Methods the Obverable Class can invoke on any Observer
-protocol DummyObserver: AnyObject { // It's extremely important that this Protocol be constrained to AnyObject
+protocol DummyObservable: AnyObject { // It's extremely important that this Protocol be constrained to AnyObject
     func onFooChanged(oldValue: String, newValue: String)
     func onBarChanged(oldValue: String, newValue: String)
 }
@@ -83,7 +83,7 @@ class Dummy: ObservableClass {
         }
         set {
             // Invoke onFooChanged for all current Observers
-            withObservers { (observer: DummyObserver) in
+            withObservers { (observer: DummyObservable) in
                 observer.onFooChanged(oldValue: _foo, newValue: newValue)
             }
             _foo = newValue
@@ -98,7 +98,7 @@ class Dummy: ObservableClass {
         }
         set {
             // Invoke onBarChanged for all current Observers
-            withObservers { (observer: DummyObserver) in
+            withObservers { (observer: DummyObservable) in
                 observer.onBarChanged(oldValue: _bar, newValue: newValue)
             }
             _bar = newValue
@@ -108,10 +108,10 @@ class Dummy: ObservableClass {
 }
 ```
 
-We can now define an *Observer* to register with the *Observable*, ensuring that we specify that it implements our `DummyObserver` protocol: 
+We can now define an *Observer* to register with the *Observable*, ensuring that we specify that it implements our `DummyObservable` protocol: 
 ```swift
-class DummyObserver: DummyObserver {
-    /* Implementations for DummyObserver */
+class DummyObserver: DummyObservable {
+    /* Implementations for DummyObservable */
     func onFooChanged(oldValue: String, newValue: String) {
         print("Foo Changed from \(oldValue) to \(newValue)")
     }
