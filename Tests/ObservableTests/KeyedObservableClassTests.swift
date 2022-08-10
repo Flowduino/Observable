@@ -15,11 +15,11 @@ protocol TestKeyedObservable: AnyObject {
 
 final class KeyedObservableClassTests: XCTestCase {
 
-    class TestKeyedObservableClass: KeyedObservableClass<String> {
+    class TestKeyedObservableClass: KeyedObservableClass {
         private var keyValues: [String:String] = ["A":"Hello", "B":"Foo"]
         
         func setValue(key: String, value: String) {
-            withKeyedObservers(for: key) { (key, observer: TestKeyedObservable) in
+            withKeyedObservers(key: key) { (key, observer: TestKeyedObservable) in
                 observer.onValueChanged(key: key, oldValue: self.keyValues[key]!, newValue: value)
             }
             self.keyValues[key] = value
@@ -48,7 +48,7 @@ final class KeyedObservableClassTests: XCTestCase {
         // Create an Observer Instance
         let observer = TestKeyedObserverClass()
         // Register the Observer with the Observable for both keyA and keyB
-        observable.addKeyedObserver(for: [keyA, keyB], observer)
+        observable.addKeyedObserver(keys: [keyA, keyB], observer)
         
         // Test Initial Values (both should be nil)
         XCTAssertEqual(observer.keyValues[keyA], oldValueA, "Initial value of '\(keyA)' should be '\(oldValueA)'!")

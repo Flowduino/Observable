@@ -12,29 +12,29 @@ import ThreadSafeSwift
 /**
  Provides custom Observer subscription and notification behaviour for Threads (with support for Keyed Observers)
  - Author: Simon J. Stuart
- - Version: 1.1.0
+ - Version: 2.0.0
  - Note: The Observers are behind a Semaphore Lock
  - Note: A "Revolving Door" solution has been implemented to ensure that Observer Callbacks can modify the Observers (add/remove) without causing a Deadlock.
  */
 @available(macOS 10.15, iOS 13.0, tvOS 13.0, watchOS 6.0, *)
-open class KeyedObservableThread<TKey: Hashable>: ObservableThread, KeyedObservable {
+open class KeyedObservableThread: ObservableThread, KeyedObservable {
     /**
      Struct for holding information required for Keyed Observers to Register and be Notified of any Changes to the Repository
      - Author: Simon J. Stuart
-     - Version: 1.1.0
+     - Version: 2.0.0
      - Note: This is why all of our Protocols must enforce a constraint of `AnyObject`
      */
     struct KeyedObservationContainer {
         /**
          The Key being Observed
          - Author: Simon J. Stuart
-         - Version: 1.1.0
+         - Version: 2.0.0
          */
-        var key: TKey
+        var key: AnyHashable
         /**
          The Observer to be notified of changes
          - Author: Simon J. Stuart
-         - Version: 1.1.0
+         - Version: 2.0.0
          */
         weak var observer: AnyObject?
         /**
@@ -46,7 +46,7 @@ open class KeyedObservableThread<TKey: Hashable>: ObservableThread, KeyedObserva
         var dispatchQueue: DispatchQueue?
         
         init(
-            key: TKey,
+            key: AnyHashable,
             observer: AnyObject?,
             dispatchQueue: DispatchQueue?
         ) {
@@ -59,25 +59,25 @@ open class KeyedObservableThread<TKey: Hashable>: ObservableThread, KeyedObserva
     /**
      Dictionary of Keys mapping onto a dictionary of `ObjectIdentifiers` with values of  `KeyedObservationContainer`
      - Author: Simon J. Stuart
-     - Version: 1.1.0
+     - Version: 2.0.0
      */
-    @ThreadSafeSemaphore private var keyedObservers = [TKey: [ObjectIdentifier : KeyedObservationContainer]]()
+    @ThreadSafeSemaphore private var keyedObservers = [AnyHashable: [ObjectIdentifier : KeyedObservationContainer]]()
     
     /**
      A Queue for newly-added Observers that are requesting registration while the `keyedObservers` Semaphore Lock is engaged by another Thread.
      - Author: Simon J. Stuart
-     - Version: 1.1.0
+     - Version: 2.0.0
      */
-    @ThreadSafeSemaphore private var keyedObserversAddQueue = [TKey: [ObjectIdentifier : KeyedObservationContainer]]()
+    @ThreadSafeSemaphore private var keyedObserversAddQueue = [AnyHashable: [ObjectIdentifier : KeyedObservationContainer]]()
     
     /**
      A Queue for Observers that are requesting removal while the `keyedObservers` Semaphore Lock is engaged by another Thread.
      - Author: Simon J. Stuart
-     - Version: 1.1.0
+     - Version: 2.0.0
      */
-    @ThreadSafeSemaphore private var keyedObserversRemoveQueue = [TKey: [ObjectIdentifier : KeyedObservationContainer]]()
+    @ThreadSafeSemaphore private var keyedObserversRemoveQueue = [AnyHashable: [ObjectIdentifier : KeyedObservationContainer]]()
     
-    public func addKeyedObserver<TObservationProtocol: AnyObject>(for key: TKey, _ observer: TObservationProtocol) {
+    public func addKeyedObserver<TObservationProtocol: AnyObject, TKey: Hashable>(key: TKey, _ observer: TObservationProtocol) {
         let oid = ObjectIdentifier(observer)
         self._keyedObservers.withTryLock { keyedObservers in
             // We were able to acquire the Lock, so Add the Observer directly...
@@ -92,7 +92,7 @@ open class KeyedObservableThread<TKey: Hashable>: ObservableThread, KeyedObserva
         }
     }
     
-    public func removeKeyedObserver<TObservationProtocol: AnyObject>(for key: TKey, _ observer: TObservationProtocol) {
+    public func removeKeyedObserver<TObservationProtocol: AnyObject, TKey: Hashable>(key: TKey, _ observer: TObservationProtocol) {
         let oid = ObjectIdentifier(observer)
         self._keyedObservers.withTryLock { keyedObservers in
             // Remove the Observer directly...
@@ -107,7 +107,7 @@ open class KeyedObservableThread<TKey: Hashable>: ObservableThread, KeyedObserva
         }
     }
     
-    public func withKeyedObservers<TObservationProtocol>(for key: TKey, _ code: @escaping (_ key: TKey, _ observer: TObservationProtocol) -> ()) {
+    public func withKeyedObservers<TObservationProtocol, TKey: Hashable>(key: TKey, _ code: @escaping (_ key: TKey, _ observer: TObservationProtocol) -> ()) {
         self._keyedObservers.withLock { keyedObservers in
             var observers = keyedObservers[key]
             if observers == nil { return }
@@ -124,8 +124,8 @@ open class KeyedObservableThread<TKey: Hashable>: ObservableThread, KeyedObserva
             }
             
             // Now we need to reconcile the Add and Remove queues with the Keyed Observers collection...
-            var addQueue = [TKey: [ObjectIdentifier : KeyedObservationContainer]]()
-            var removeQueue = [TKey: [ObjectIdentifier : KeyedObservationContainer]]()
+            var addQueue = [AnyHashable: [ObjectIdentifier : KeyedObservationContainer]]()
+            var removeQueue = [AnyHashable: [ObjectIdentifier : KeyedObservationContainer]]()
             
             self._keyedObserversAddQueue.withLock { keyedObserversAddQueue in
                 addQueue = keyedObserversAddQueue // Take a local copy

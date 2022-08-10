@@ -17,7 +17,7 @@
 </p>
 
 Collection of carefully-prepared Classes and Protocols designed to imbue your inheriting Object Types with efficient, protocol-driven Observer Pattern Behaviour.
-As of version 1.1.0, this includes support for *Keyed Observers* (see usage examples below for details)
+As of version 2.0.0, this includes support for *Keyed Observers* (see usage examples below for details)
 
 ## Installation
 ### Xcode Projects
@@ -31,7 +31,7 @@ let package = Package(
     dependencies: [
         .package(
             url: "https://github.com/Flowduino/Observable.git",
-            .upToNextMajor(from: "1.1.0")
+            .upToNextMajor(from: "2.0.0")
         ),
     ],
     //...
@@ -196,11 +196,12 @@ You can adopt this approach for any Observation-Based Thread Behaviour you requi
 
 ### Keyed Observation Pattern
 As of version 1.1.0, you can now register and notify *Keyed Observers*.
+**Note**: Version 2.0.0 modified the Interface significantly to eliminate the need for Generic Typing of the Key. Key Types are now inferred for you.
 
 This functionality is an extension of the standard Observer Pattern, and is implemented in the following classes from which you can extend:
-- `KeyedObservableClass<TKey: Hashable>` instead of `ObservableClass`
-- `KeyedObservableThread<TKey: Hashable>` instead of `ObservableThread`
-- `KeyedObservableThreadSafeClass<TKey: Hashable>` instead of `ObservableThreadSafeClass`
+- `KeyedObservableClass` instead of `ObservableClass`
+- `KeyedObservableThread` instead of `ObservableThread`
+- `KeyedObservableThreadSafeClass` instead of `ObservableThreadSafeClass`
 
 *Remember, Keyed Observation is an **extension** of the basic Observation Pattern, so any Keyed Observable is also inherently able to register and notify non-Keyed Observers*
 
@@ -227,7 +228,7 @@ class TestKeyedObservableClass: KeyedObservableClass<String> {
     private var keyValues: [String:String] = ["A":"Hello", "B":"Foo", "C":"Ping"]
     
     func setValue(key: String, value: String) {
-        withKeyedObservers(for: key) { (key, observer: TestKeyedObservable) in
+        withKeyedObservers(key: key) { (key, observer: TestKeyedObservable) in
             observer.onValueChanged(key: key, oldValue: self.keyValues[key]!, newValue: value)
         }
         self.keyValues[key] = value
@@ -265,29 +266,29 @@ At this point, we need to consider what Key or Keys our `observer` is going to O
 
 For example, we can Observe just one key:
 ```swift
-observable.addKeyedObserver(for: "A", observer)
+observable.addKeyedObserver(key: "A", observer)
 ```
 The above means that `observer` would only have its `onValueChanged` method invoked when the value of key *A* is modified in `observable`.
 
 Likewise, if we only care about key *B*, we can do:
 ```swift
-observable.addKeyedObserver(for: "B", observer)
+observable.addKeyedObserver(key: "B", observer)
 ```
 
 If we care about *both* known keys, we can simply register them both:
 ```swift
-observable.addKeyedObserver(for: ["A", "B"], observer)
+observable.addKeyedObserver(keys: ["A", "B"], observer)
 ```
 
 Also, we can do something particularly clever and basically register the Observer for every Key known to its own Dictionary:
 ```swift
-observable.addKeyedObserver(for: Array(observer.keyValues.keys), observer)
+observable.addKeyedObserver(keys: Array(observer.keyValues.keys), observer)
 ```
 The above would register `observer` with `observable` for every *key* contained in `observer`'s `keyValues` dictionary.
 
 Ultimately, you can register the `observer` with the `observable` for any keys you want:
 ```swift
-observable.addKeyedObserver(for: "Foo", observer)
+observable.addKeyedObserver(key: "Foo", observer)
 ```
 
 Let's output the initial values of all of our keys before we invoke any code that would modify their values:
